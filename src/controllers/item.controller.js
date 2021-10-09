@@ -180,3 +180,32 @@ exports.completeItem = asyncHandler(async (req, res, next) => {
         status: 200
     })
 })
+
+// @desc    Delete item 
+// @route   DELETE /api/todo/v1/items/:id
+// access   Private
+
+exports.deleteItem = asyncHandler(async (res, req, next) => {
+
+    const item = await Item.findById(req.params.id)
+
+    if(!item){
+        await Reminder.finfByIdAndDelete(item.Reminder);
+    }
+
+    // remove item from todo
+    const todo = await Todo.findById(item.todo);
+    const itemIndex = todo.item.indexOf(item._id); // find item id index
+    todo.item.splice(itemIndex, 1)
+    await todo.save()
+
+    await item.finfByIdAndDelete(item._id);
+
+    res.status(200).json({
+        error: false,
+        errors: [],
+        data: null,
+        message: 'successful',
+        status: 200
+    })
+})
