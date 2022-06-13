@@ -13,6 +13,7 @@ const Item = require('../models/Item.model');
 const User = require('../models/User.model');
 
 const nats = require('../events/nats');
+
 const ItemCompleted = require('../events/publishers/item-completed');
 
 // @desc    Get all items
@@ -64,6 +65,8 @@ exports.createItem = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse('invalid format', 400, ['dueDate is required in the format YYYY-MM-DD']));
 
     }
+
+
 
     if(!strIncludesEs6(dueTime, ':')){
         return next(new ErrorResponse('invalid format', 400, ['dueTime is required in the format 00:00:00']))
@@ -208,4 +211,21 @@ exports.deleteItem = asyncHandler(async (res, req, next) => {
         message: 'successful',
         status: 200
     })
+})
+
+// @desc    Edit item 
+// @route   PUT /api/todo/v1/items/:id
+// access   Private
+exports.editItem = asyncHandler(async (res, req, next) => {
+
+    const { title, dueDate, dueTime, description } = (req.body);
+
+    const item = await Item.findById(req.params.id)
+
+
+
+    // if user changes dueDate
+    if(item.dueDate !== dueDate){
+
+    }
 })

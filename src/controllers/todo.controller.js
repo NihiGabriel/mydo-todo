@@ -211,6 +211,7 @@ exports.completeTodo = asyncHandler(async (req, res, next) => {
     todo.status = 'done';
     await todo.save();
 
+    // nats
     await new TodoCompleted(nats.client).publish(todo);
     
     res.status(200).json({
@@ -240,7 +241,7 @@ exports.deleteTodo = asyncHandler(async(req, res, next) => {
             // find the item
             const item = await Item.findById(todo.item[j]);
 
-            // check if ite has reminder
+            // check if item has reminder
             if(item.reminder && item.reminder !== ''){
                 await Reminder.findByIdAndDelete(item.reminder);
             }
@@ -268,5 +269,78 @@ exports.deleteTodo = asyncHandler(async(req, res, next) => {
     })
 
     // Publish nats for notification
+
+})
+
+// @desc    Edit todo
+// @route   PUT /api/todo/v1/todos/:id
+// access   Private
+exports.editTodo = asyncHandler(async (req, res, next) => {
+
+    const { title, dueDate, dueTime} = (req.body);
+
+    const todo = await Todo.findById(req.params.id);
+
+    if(!todo){
+        return next(new ErrorResponse('Not Found!', 404, ['todo list does not exist']));
+    }
+
+    let year, month, day;
+
+    if(dueDate && todo.dueDate !== dueDate){
+
+        if(!strIncludesEs6(dueDate, '-')){
+            return next(new ErrorResponse('invalid format', 400, ['dueDate is required in the format YYYY-MM-DD']))
+        }
+    
+        if(dueDate.split('-')[0].length !== 4 && dueDate.split('-')[1].length !== 2 && dueDate.split('-')[2].length !== 2 ){
+            return next(new ErrorResponse('invalid format', 400, ['dueDate is required in the format YYYY-MM-DD']))
+    
+        }
+
+        const tsd = dueDate.split('-');
+            year = tsd[0];
+            month = tsd[1];
+            day = tsd[2];
+
+    }
+
+    let hr, min, sec, mer;
+
+    if(dueTime && todo.dueTime !== dueTime){
+
+        if(!strIncludesEs6(dueTime, ':')){
+            return next(new ErrorResponse('invalid format', 400, ['dueTime is required in the format 00:00:00']))
+        }
+    
+       const tsp = dueTime.split(':');
+             hr = tsp[0];
+             min = tsp[1]
+             sec = tsp[2]
+             mer = parseInt (hr) >= 12 ? 'PM' : 'AM'
+
+    }
+
+    const now = dayjs();
+
+    const fullDue = dayjs(year + '-' + month + '-' + day + ' ' + hr + ':' + min + ':' + sec);
+  
+    if(fullDue.get('date') < now.get('date')){
+        return next(new ErrorResponse('forbidden!', 403, ['dueDate cannot be a past date']));
+    }
+
+    todo.title = title ? title : todo.title
+
+    todo.dueDate = dueDate ? dueDate : todo.dueDate
+
+    todo.dueTime = dueTime ? dueTime : todo.dueTime
+
+    res.status(200).json({
+        error: false,
+        errors: [],
+        data: todo,
+        message: 'successful',
+        status: 200
+    })
 
 })
